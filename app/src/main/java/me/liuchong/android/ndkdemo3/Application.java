@@ -18,7 +18,7 @@ public class Application extends android.app.Application {
 
     // Used to load the 'native-lib' library on application startup.
     static {
-        System.loadLibrary("native-lib");
+        System.loadLibrary("serial_port");
     }
 
     @Override
