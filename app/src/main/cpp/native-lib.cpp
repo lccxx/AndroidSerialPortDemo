@@ -47,43 +47,6 @@ static speed_t getBaudrate(jint baudrate)
 }
 
 extern "C"
-
-JavaVM* gJvm = nullptr;
-static jobject gClassLoader;
-static jmethodID gFindClassMethod;
-
-JNIEnv* getEnv() {
-    JNIEnv *env;
-    int status = gJvm->GetEnv((void**)&env, JNI_VERSION_1_6);
-    if(status < 0) {
-        status = gJvm->AttachCurrentThread(&env, NULL);
-        if(status < 0) {
-            return nullptr;
-        }
-    }
-    return env;
-}
-
-jclass findClass(const char* name) {
-    return static_cast<jclass>(getEnv()->CallObjectMethod(gClassLoader, gFindClassMethod, getEnv()->NewStringUTF(name)));
-}
-
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *pjvm, void *reserved) {
-    gJvm = pjvm;  // cache the JavaVM pointer
-    auto env = getEnv();
-    //replace with one of your classes in the line below
-    auto randomClass = env->FindClass("java/io/FileDescriptor");
-    jclass classClass = env->GetObjectClass(randomClass);
-    auto classLoaderClass = env->FindClass("java/lang/ClassLoader");
-    auto getClassLoaderMethod = env->GetMethodID(classClass, "getClassLoader",
-                                                 "()Ljava/lang/ClassLoader;");
-    gClassLoader = env->CallObjectMethod(randomClass, getClassLoaderMethod);
-    gFindClassMethod = env->GetMethodID(classLoaderClass, "findClass",
-                                        "(Ljava/lang/String;)Ljava/lang/Class;");
-
-    return JNI_VERSION_1_6;
-}
-
 JNIEXPORT jobject JNICALL
 Java_me_liuchong_android_ndkdemo3_Application_open(JNIEnv *env, jobject instance, jstring path_,
                                                    jint baudrate, jint flags) {
@@ -145,7 +108,7 @@ Java_me_liuchong_android_ndkdemo3_Application_open(JNIEnv *env, jobject instance
 
     /* Create a corresponding file descriptor */
     {
-        jclass cFileDescriptor = findClass("java/io/FileDescriptor");
+        jclass cFileDescriptor = env->FindClass("java/io/FileDescriptor");
         jmethodID iFileDescriptor = env->GetMethodID(cFileDescriptor, "<init>", "()V");
         jfieldID descriptorID = env->GetFieldID(cFileDescriptor, "descriptor", "I");
         mFileDescriptor = env->NewObject(cFileDescriptor, iFileDescriptor);
@@ -155,10 +118,11 @@ Java_me_liuchong_android_ndkdemo3_Application_open(JNIEnv *env, jobject instance
     return mFileDescriptor;
 }
 
+extern "C"
 JNIEXPORT void JNICALL
 Java_me_liuchong_android_ndkdemo3_Application_close(JNIEnv *env, jobject instance) {
     jclass SerialPortClass = env->GetObjectClass(instance);
-    jclass FileDescriptorClass = findClass("java/io/FileDescriptor");
+    jclass FileDescriptorClass = env->FindClass("java/io/FileDescriptor");
 
     jfieldID mFdID = env->GetFieldID(SerialPortClass, "mFd", "Ljava/io/FileDescriptor;");
     jfieldID descriptorID = env->GetFieldID(FileDescriptorClass, "descriptor", "I");
@@ -170,6 +134,7 @@ Java_me_liuchong_android_ndkdemo3_Application_close(JNIEnv *env, jobject instanc
     close(descriptor);
 }
 
+extern "C"
 JNIEXPORT jstring JNICALL
 Java_me_liuchong_android_ndkdemo3_Application_stringFromJNI(
         JNIEnv *env,
